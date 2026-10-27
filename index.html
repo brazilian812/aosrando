@@ -336,8 +336,11 @@
     </div>
   </div>
 
-  <!-- Generate & Download Button -->
-  <button class="btn" id="btnRandomize" disabled>Randomize & Download ROM + Spoiler Log</button>
+  <!-- Dual Action Buttons -->
+  <div class="seed-row" style="margin-top: 15px;">
+    <button class="btn" id="btnGenerateRom" disabled>Generate & Download ROM (.gba)</button>
+    <button class="btn" id="btnGenerateLog" style="background-color: #2e263b;" disabled>Download Spoiler Log (.txt)</button>
+  </div>
 
   <!-- Console Log Output -->
   <div id="console">
@@ -589,10 +592,14 @@
     }
   }
 
-  // UI Handlers & Downloader Logic
+  // UI State & Downloader Handlers
   let loadedRomBuffer = null;
+  let currentGeneratedRom = null;
+  let currentSpoilerText = "";
+
   const consoleEl = document.getElementById('console');
-  const btnRandomize = document.getElementById('btnRandomize');
+  const btnGenerateRom = document.getElementById('btnGenerateRom');
+  const btnGenerateLog = document.getElementById('btnGenerateLog');
   const spoilerDrawer = document.getElementById('spoilerDrawer');
   const spoilerContent = document.getElementById('spoilerContent');
   const btnToggleSpoiler = document.getElementById('btnToggleSpoiler');
@@ -630,7 +637,7 @@
       } else {
         log(`Loaded Valid USA ROM: ${file.name} (${loadedRomBuffer.byteLength} bytes)`);
       }
-      btnRandomize.disabled = false;
+      btnGenerateRom.disabled = false;
     };
     reader.readAsArrayBuffer(file);
   });
@@ -639,8 +646,8 @@
     document.getElementById('seedInput').value = Math.floor(Math.random() * 999999);
   });
 
-  btnRandomize.addEventListener('click', () => {
-    if (!loadedRomBuffer) return;
+  // Helper to run randomization engine
+  function runEngine() {
     const seed = parseInt(document.getElementById('seedInput').value, 10) || 1337;
     const options = {
       seed: seed,
@@ -659,25 +666,38 @@
       expMult: parseFloat(document.getElementById('numExpMult').value) || 1.0
     };
 
-    log(`Starting randomization for Seed: ${seed}...`);
+    const engine = new AoSRandomizer(loadedRomBuffer.slice(0));
+    const result = engine.randomize(options);
+    
+    currentGeneratedRom = result.patchedRom;
+    currentSpoilerText = result.spoilerText;
+    spoilerContent.textContent = currentSpoilerText;
+    btnGenerateLog.disabled = false;
+
+    return seed;
+  }
+
+  // Button 1: Download ROM
+  btnGenerateRom.addEventListener('click', () => {
+    if (!loadedRomBuffer) return;
     try {
-      const engine = new AoSRandomizer(loadedRomBuffer.slice(0));
-      const { patchedRom, spoilerText } = engine.randomize(options);
-      
-      // Update UI drawer with full text first
-      spoilerContent.textContent = spoilerText;
-
-      // 1. Trigger .GBA ROM Download
-      triggerDownload(new Blob([patchedRom], { type: "application/octet-stream" }), `AoS_Rando_Seed_${seed}.gba`);
-
-      // 2. Delay .TXT Spoiler Log Download by 500ms to allow iOS Safari to clear the first download prompt
-      setTimeout(() => {
-        triggerDownload(new Blob([spoilerText], { type: "text/plain;charset=utf-8" }), `AoS_Spoiler_Log_Seed_${seed}.txt`);
-        log(`Downloaded ROM ('AoS_Rando_Seed_${seed}.gba') and Spoiler Log ('AoS_Spoiler_Log_Seed_${seed}.txt')!`);
-      }, 500);
-
+      const seed = runEngine();
+      triggerDownload(new Blob([currentGeneratedRom], { type: "application/octet-stream" }), `AoS_Rando_Seed_${seed}.gba`);
+      log(`Generated and downloaded ROM: 'AoS_Rando_Seed_${seed}.gba'!`);
     } catch (err) {
-      log(`Error during patching: ${err.message}`, true);
+      log(`Error during ROM patching: ${err.message}`, true);
+    }
+  });
+
+  // Button 2: Download Spoiler Log
+  btnGenerateLog.addEventListener('click', () => {
+    if (!currentSpoilerText) return;
+    const seed = parseInt(document.getElementById('seedInput').value, 10) || 1337;
+    try {
+      triggerDownload(new Blob([currentSpoilerText], { type: "text/plain;charset=utf-8" }), `AoS_Spoiler_Log_Seed_${seed}.txt`);
+      log(`Downloaded Spoiler Log: 'AoS_Spoiler_Log_Seed_${seed}.txt'!`);
+    } catch (err) {
+      log(`Error downloading log: ${err.message}`, true);
     }
   });
 </script>
