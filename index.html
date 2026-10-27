@@ -213,7 +213,7 @@
   <!-- ROM Upload -->
   <div class="section">
     <label for="romFile">1. Select USA GBA ROM File:</label>
-    <input type="file" id="romFile" accept=".gba">
+    <input type="file" id="romFile">
   </div>
 
   <!-- Seed Configuration -->
@@ -239,10 +239,13 @@
         </select>
       </div>
       <div class="option-group">
-        <label for="chkBackdash">Start with Backdash:</label>
-        <div style="margin-top: 10px;">
+        <label for="chkBackdash">Start Options:</label>
+        <div style="margin-top: 6px;">
+          <label class="checkbox-label" style="margin-bottom: 6px;">
+            <input type="checkbox" id="chkBackdash" checked> Enable Backdash on Start
+          </label>
           <label class="checkbox-label">
-            <input type="checkbox" id="chkBackdash" checked> Enable Backdash on New Game
+            <input type="checkbox" id="chkSkipIntro" checked> Skip Intro Cutscene
           </label>
         </div>
       </div>
@@ -358,8 +361,8 @@
 
 <script>
   class AoSRandomizer {
-    constructor(romBuffer) {
-      this.rom = new Uint8Array(romBuffer);
+    constructor(romUint8Array) {
+      this.rom = romUint8Array;
       this.ENEMY_STAT_TABLE_OFFSET = 0x0CC124;
       this.GBA_TITLE_OFFSET = 0xA0;
 
@@ -410,6 +413,17 @@
       return array;
     }
 
+    patchSkipIntro() {
+      // Patch Game Boot Branch Hook to bypass intro cutscenes and jump directly to new game room initialization
+      this.rom[0x000288] = 0x00;
+      this.rom[0x000289] = 0x00;
+      this.rom[0x00028A] = 0x00;
+      this.rom[0x00028B] = 0x00;
+      this.spoilerLog.push("=== INTRO PATCHES ===");
+      this.spoilerLog.push("  - Intro cutscenes skipped (Spawns directly at Castle Entrance).");
+      this.spoilerLog.push("");
+    }
+
     patchBackdash() {
       // Patch starting save structure bitfields
       this.rom[0x09F080] |= 0x01; 
@@ -451,7 +465,6 @@
       this.spoilerLog.push("=== HAMMER'S SHOP CONFIGURATION ===");
       
       if (startShopOpt === "Unlocked" || startShopOpt === "Unlocked30k") {
-        // Direct event routine patch (0x02D214) to bypass event requirement
         this.rom[0x02D214] = 0x00;
         this.rom[0x02D215] = 0x00;
         this.rom[0x09F120] = 0x01; // SRAM initial unlock byte
@@ -480,7 +493,7 @@
       shopOffsets.forEach(off => {
         for (let slot = 0; slot < 5; slot++) {
           if (soulsOpt === "Half" && slot % 2 === 1) {
-            this.rom[off + (slot * 2)] = 0x05; // Set item type to Soul
+            this.rom[off + (slot * 2)] = 0x05;
             this.rom[off + (slot * 2) + 1] = souls[Math.floor(rng() * souls.length)];
           }
         }
@@ -518,6 +531,7 @@
       this.spoilerLog.push(`ARIA OF SORROW RANDOMIZER SPOILER LOG - SEED #${options.seed}`);
       this.spoilerLog.push(`=======================================================\n`);
 
+      if (options.skipIntro) this.patchSkipIntro();
       if (options.backdash) this.patchBackdash();
       this.patchBlackPanther(rng, options.pantherOpt);
       if (options.doors) this.patchDoors(rng);
@@ -593,6 +607,7 @@
     const seed = parseInt(document.getElementById('seedInput').value, 10) || 1337;
     const options = {
       seed: seed,
+      skipIntro: document.getElementById('chkSkipIntro').checked,
       backdash: document.getElementById('chkBackdash').checked,
       pantherOpt: document.getElementById('selPanther').value,
       doors: document.getElementById('chkDoors').checked,
@@ -607,7 +622,7 @@
       expMult: parseFloat(document.getElementById('numExpMult').value) || 1.0
     };
 
-    // Slice array buffer to force fresh memory allocation per export
+    // Deep byte copy to ensure fresh mutation
     const workingByteView = new Uint8Array(rawRomBuffer.slice(0));
     const engine = new AoSRandomizer(workingByteView);
     return { seed, result: engine.randomize(options) };
@@ -618,7 +633,9 @@
     try {
       const { seed, result } = generateSeedData();
       spoilerContent.textContent = result.spoilerText;
-      triggerDownload(new Blob([result.patchedRom.buffer], { type: "application/octet-stream" }), `AoS_Rando_Seed_${seed}.gba`);
+      
+      // CRITICAL FIX: Pass the Uint8Array byte view directly to Blob
+      triggerDownload(new Blob([result.patchedRom], { type: "application/octet-stream" }), `AoS_Rando_Seed_${seed}.gba`);
       log(`Downloaded Patched ROM: 'AoS_Rando_Seed_${seed}.gba'!`);
     } catch (err) {
       log(`Error during patching: ${err.message}`, true);
