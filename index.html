@@ -246,7 +246,7 @@
     </div>
   </div>
 
-  <!-- Shop Options (Defaulting to Always Unlocked) -->
+  <!-- Shop Options -->
   <div class="section">
     <label>4. Shop Options (AoS Surge Settings):</label>
     <div class="option-grid">
@@ -378,12 +378,33 @@
         { name: "Garden_Rise", offset: 0x4B608, dir: "TOP", zone: 5, room: 3 }
       ];
 
+      this.itemLocations = [
+        { name: "Castle Entrance (Room 0,5)", offset: 0x4C120 },
+        { name: "Chapel (Room 1,8)", offset: 0x4C540 },
+        { name: "Study (Room 2,4)", offset: 0x4C980 },
+        { name: "Inner Quarters (Room 4,7)", offset: 0x4D100 },
+        { name: "Floating Garden (Room 5,3)", offset: 0x4D840 }
+      ];
+
+      this.keyItems = [
+        { id: 0x01, name: "Flying Armor" },
+        { id: 0x03, name: "Double Jump (Malphas)" },
+        { id: 0x04, name: "Skula" },
+        { id: 0x05, name: "Giant Bat" },
+        { id: 0x4A, name: "Ancient Book 1" }
+      ];
+
       this.bossPool = [
         { name: "Headhunter", entityOffset: 0x04D160, id: 0x58 },
         { name: "Death", entityOffset: 0x04DD20, id: 0x5B },
         { name: "Legion", entityOffset: 0x04E100, id: 0x5C },
         { name: "Balore", entityOffset: 0x04E500, id: 0x5D }
       ];
+
+      this.itemNames = {
+        0x01: "Short Sword", 0x02: "Baselard", 0x03: "Knife", 0x05: "Broadsword",
+        0x08: "Leather Armor", 0x0F: "Milican's Sword", 0x12: "Combat Knife", 0x18: "Balisarda"
+      };
 
       this.spoilerLog = [];
     }
@@ -435,7 +456,7 @@
     }
 
     patchDoors(rng) {
-      this.spoilerLog.push("=== 2-WAY SYMMETRIC DOOR CONNECTIONS ===");
+      this.spoilerLog.push("=== 2-WAY SYMMETRIC DOOR CONNECTIONS (MAP LAYOUT) ===");
       const lefts = this.shuffle(this.doors.filter(d => d.dir === "LEFT"), rng);
       const rights = this.shuffle(this.doors.filter(d => d.dir === "RIGHT"), rng);
       
@@ -445,26 +466,38 @@
         this.rom[rights[i].offset] = lefts[i].zone;
         this.rom[rights[i].offset + 1] = lefts[i].room;
 
-        this.spoilerLog.push(`  [Door Link] ${lefts[i].name} <---> ${rights[i].name}`);
+        this.spoilerLog.push(`  [Door Link] ${lefts[i].name} (Zone ${lefts[i].zone}, Room ${lefts[i].room}) <---> ${rights[i].name} (Zone ${rights[i].zone}, Room ${rights[i].room})`);
+      }
+      this.spoilerLog.push("");
+    }
+
+    patchItems(rng) {
+      this.spoilerLog.push("=== KEY ITEM & ABILITY LOCATIONS ===");
+      const shuffledItems = this.shuffle([...this.keyItems], rng);
+      
+      for (let i = 0; i < this.itemLocations.length; i++) {
+        const loc = this.itemLocations[i];
+        const item = shuffledItems[i];
+        
+        // Write byte to ROM entity offset
+        this.rom[loc.offset + 0x06] = item.id;
+        this.spoilerLog.push(`  [Location] ${loc.name} ---> Contains: ${item.name} (ID: 0x${item.id.toString(16).toUpperCase()})`);
       }
       this.spoilerLog.push("");
     }
 
     patchSurgeShop(rng, startShopOpt, priceOpt, soulsOpt, enable2Tier) {
-      this.spoilerLog.push("=== HAMMER'S SHOP CONFIGURATION (AoS Surge) ===");
+      this.spoilerLog.push("=== HAMMER'S SHOP CONFIGURATION & INVENTORY ===");
       this.spoilerLog.push(`  - Start With Shop:  ${startShopOpt}`);
       this.spoilerLog.push(`  - Shop Prices:      ${priceOpt}`);
       this.spoilerLog.push(`  - Shop Souls:       ${soulsOpt}`);
 
-      // Always unlock shop unless explicitly set back to Vanilla
       if (startShopOpt === "Unlocked" || startShopOpt === "Unlocked30k") {
-        this.rom[0x09F120] = 0x01; // Shop Unlocked Flag
+        this.rom[0x09F120] = 0x01; 
         if (startShopOpt === "Unlocked30k") {
           this.rom[0x09F124] = 0x30;
-          this.rom[0x09F125] = 0x75; // 30,000 Gold
-          this.spoilerLog.push("  - Granted 30,000 Starting Gold.");
-        } else {
-          this.spoilerLog.push("  - Hammer's Shop is unlocked from New Game.");
+          this.rom[0x09F125] = 0x75; 
+          this.spoilerLog.push("  - Starting Gold:    30,000 Gold");
         }
       }
 
@@ -475,7 +508,7 @@
           this.rom[priceTableOffset + (i * 2)] = randPrice & 0xFF;
           this.rom[priceTableOffset + (i * 2) + 1] = (randPrice >> 8) & 0xFF;
         }
-        this.spoilerLog.push("  - Randomized Shop Price Table (High Variance).");
+        this.spoilerLog.push("  - Price Table:      Randomized (High Variance)");
       }
 
       const earlyOffsets = [0x09B4D0, 0x09B4E4, 0x09B4F8, 0x09B50C];
@@ -495,33 +528,55 @@
         }
       };
 
-      const applyTierStock = (offset) => {
+      const applyTierStock = (offset, tierName) => {
+        this.spoilerLog.push(`  [Inventory - ${tierName}]:`);
         for (let slot = 0; slot < 5; slot++) {
           const entry = getItemOrSoul(slot);
           this.rom[offset + (slot * 2)] = entry.type;
           this.rom[offset + (slot * 2) + 1] = entry.id;
+          
+          const label = entry.type === 0x05 ? `Soul ID 0x${entry.id.toString(16).toUpperCase()}` : (this.itemNames[entry.id] || `Item ID 0x${entry.id.toString(16).toUpperCase()}`);
+          this.spoilerLog.push(`    - Slot ${slot + 1}: ${label}`);
         }
       };
 
       if (enable2Tier) {
-        earlyOffsets.forEach(off => applyTierStock(off));
-        applyTierStock(lateOffset);
-        this.spoilerLog.push("  - Applied 2-Tier Post-Death Inventory Stock.");
+        applyTierStock(earlyOffsets[0], "Tier 1 (Beginning)");
+        applyTierStock(lateOffset, "Tier 2 (Post-Death Slain)");
       } else {
-        earlyOffsets.concat([lateOffset]).forEach(off => applyTierStock(off));
+        applyTierStock(earlyOffsets[0], "Standard Single Tier");
+      }
+      this.spoilerLog.push("");
+    }
+
+    patchBosses(rng) {
+      this.spoilerLog.push("=== BOSS ALLOCATIONS ===");
+      const shuffledBosses = this.shuffle([...this.bossPool], rng);
+      
+      for (let i = 0; i < this.bossPool.length; i++) {
+        const arena = this.bossPool[i];
+        const assignedBoss = shuffledBosses[i];
+        this.rom[arena.entityOffset + 0x05] = assignedBoss.id;
+        this.spoilerLog.push(`  [Arena] ${arena.name} Arena ---> Replaced by: ${assignedBoss.name} (ID: 0x${assignedBoss.id.toString(16).toUpperCase()})`);
       }
       this.spoilerLog.push("");
     }
 
     patchEnemiesAndStats(rng, options) {
       if (options.enemyShuffleOpt !== "Vanilla") {
-        this.spoilerLog.push("=== ENEMY LEVEL RANGE SHUFFLE (AoS Surge) ===");
+        this.spoilerLog.push("=== ENEMY SPAWN SHUFFLE ===");
         this.spoilerLog.push(`  - Level Deviation Mode: ${options.enemyShuffleOpt}`);
         
-        const spawns = [0x04C140, 0x04C560, 0x04C9A0, 0x04D120];
-        spawns.forEach(off => {
+        const spawns = [
+          { name: "Castle Entrance", offset: 0x04C140 },
+          { name: "Chapel", offset: 0x04C560 },
+          { name: "Study", offset: 0x04C9A0 },
+          { name: "Inner Quarters", offset: 0x04D120 }
+        ];
+        spawns.forEach(sp => {
           const newId = Math.floor(rng() * 0x6D) + 1;
-          this.rom[off + 0x05] = newId;
+          this.rom[sp.offset + 0x05] = newId;
+          this.spoilerLog.push(`  [Spawn] ${sp.name} -> Enemy ID 0x${newId.toString(16).toUpperCase()}`);
         });
         this.spoilerLog.push("");
       }
@@ -532,7 +587,7 @@
         for (let i = 0; i < 112; i++) {
           this.rom[this.ENEMY_STAT_TABLE_OFFSET + (i * 36) + 0x10] = souls[i];
         }
-        this.spoilerLog.push("  - All 112 enemy soul drops randomly assigned.");
+        this.spoilerLog.push("  - All 112 enemy soul drops randomly shuffled across the castle.");
         this.spoilerLog.push("");
       }
 
@@ -562,7 +617,7 @@
       const rng = this.seededRandom(options.seed);
       this.spoilerLog = [];
       this.spoilerLog.push(`=======================================================`);
-      this.spoilerLog.push(`ARIA OF SORROW RANDOMIZER DIAGNOSTIC & SPOILER LOG`);
+      this.spoilerLog.push(`ARIA OF SORROW RANDOMIZER SPOILER & DIAGNOSTIC LOG`);
       this.spoilerLog.push(`=======================================================`);
       this.spoilerLog.push(`Seed Number:        ${options.seed}`);
       this.spoilerLog.push(`Generated On:       ${new Date().toLocaleString()}`);
@@ -581,8 +636,10 @@
 
       if (options.backdash) this.patchBackdash();
       this.patchBlackPanther(rng, options.pantherOpt);
+      this.patchItems(rng);
       if (options.doors) this.patchDoors(rng);
       this.patchSurgeShop(rng, options.startShopOpt, options.priceOpt, options.soulsOpt, options.shopTiers);
+      if (options.bosses) this.patchBosses(rng);
       this.patchEnemiesAndStats(rng, options);
 
       return {
@@ -592,7 +649,7 @@
     }
   }
 
-  // UI State & Downloader Handlers
+  // UI Handlers & State Management
   let loadedRomBuffer = null;
   let currentGeneratedRom = null;
   let currentSpoilerText = "";
@@ -646,7 +703,6 @@
     document.getElementById('seedInput').value = Math.floor(Math.random() * 999999);
   });
 
-  // Helper to run randomization engine
   function runEngine() {
     const seed = parseInt(document.getElementById('seedInput').value, 10) || 1337;
     const options = {
@@ -677,7 +733,6 @@
     return seed;
   }
 
-  // Button 1: Download ROM
   btnGenerateRom.addEventListener('click', () => {
     if (!loadedRomBuffer) return;
     try {
@@ -689,7 +744,6 @@
     }
   });
 
-  // Button 2: Download Spoiler Log
   btnGenerateLog.addEventListener('click', () => {
     if (!currentSpoilerText) return;
     const seed = parseInt(document.getElementById('seedInput').value, 10) || 1337;
