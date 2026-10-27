@@ -664,13 +664,18 @@
       const engine = new AoSRandomizer(loadedRomBuffer.slice(0));
       const { patchedRom, spoilerText } = engine.randomize(options);
       
+      // Update UI drawer with full text first
       spoilerContent.textContent = spoilerText;
 
-      // Download Patched .GBA ROM & .TXT Spoiler Log
+      // 1. Trigger .GBA ROM Download
       triggerDownload(new Blob([patchedRom], { type: "application/octet-stream" }), `AoS_Rando_Seed_${seed}.gba`);
-      triggerDownload(new Blob([spoilerText], { type: "text/plain;charset=utf-8" }), `AoS_Spoiler_Log_Seed_${seed}.txt`);
 
-      log(`Downloaded ROM ('AoS_Rando_Seed_${seed}.gba') and Spoiler Log ('AoS_Spoiler_Log_Seed_${seed}.txt')!`);
+      // 2. Delay .TXT Spoiler Log Download by 500ms to allow iOS Safari to clear the first download prompt
+      setTimeout(() => {
+        triggerDownload(new Blob([spoilerText], { type: "text/plain;charset=utf-8" }), `AoS_Spoiler_Log_Seed_${seed}.txt`);
+        log(`Downloaded ROM ('AoS_Rando_Seed_${seed}.gba') and Spoiler Log ('AoS_Spoiler_Log_Seed_${seed}.txt')!`);
+      }, 500);
+
     } catch (err) {
       log(`Error during patching: ${err.message}`, true);
     }
