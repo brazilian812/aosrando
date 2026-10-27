@@ -50,9 +50,7 @@
       padding-bottom: 15px;
     }
 
-    .section {
-      margin-bottom: 20px;
-    }
+    .section { margin-bottom: 20px; }
 
     label {
       display: block;
@@ -126,9 +124,7 @@
       transition: background-color 0.2s;
     }
 
-    button.btn:hover {
-      background-color: var(--accent-hover);
-    }
+    button.btn:hover { background-color: var(--accent-hover); }
 
     button.btn:disabled {
       background-color: #3d1b1b;
@@ -167,12 +163,6 @@
       justify-content: space-between;
       align-items: center;
       margin-top: 15px;
-      transition: color 0.2s, background-color 0.2s;
-    }
-
-    .drawer-toggle:hover {
-      color: var(--text);
-      background-color: #1a1523;
     }
 
     .drawer-content {
@@ -221,17 +211,16 @@
     </div>
   </div>
 
-  <!-- Quality of Life & Special Ability Options -->
+  <!-- Quality of Life & Abilities -->
   <div class="section">
     <label>3. Quality of Life & Abilities:</label>
     <div class="option-grid">
       <div class="option-group">
         <label for="selPanther">Black Panther Setting (panther):</label>
         <select id="selPanther">
+          <option value="FirstAlways" selected>Always First</option>
           <option value="Vanilla">Vanilla</option>
-          <option value="FirstAlways">Always First</option>
           <option value="AlwaysRand">Always Random</option>
-          <option value="ExtraFairRand">Extra Fair Random</option>
           <option value="NeverExists">Never Exists</option>
         </select>
       </div>
@@ -261,16 +250,16 @@
       <div class="option-group">
         <label for="selShopPrice">Shop Price (shopprice):</label>
         <select id="selShopPrice">
+          <option value="RandHV" selected>Random HV (High Variance)</option>
           <option value="Vanilla">Vanilla</option>
-          <option value="RandHV">Random HV (High Variance)</option>
         </select>
       </div>
       <div class="option-group">
         <label for="selShopSouls">Shop Souls (shopSouls):</label>
         <select id="selShopSouls">
+          <option value="Half" selected>Half</option>
           <option value="Vanilla">Vanilla</option>
           <option value="2PerGroup">2 per group</option>
-          <option value="Half">Half</option>
           <option value="OnlySouls">Only souls</option>
         </select>
       </div>
@@ -295,9 +284,6 @@
           <option value="Vanilla">Vanilla</option>
           <option value="RandomPM10">±10 Levels</option>
           <option value="RandomPM20">±20 Levels</option>
-          <option value="RandomP20M5">+20 -5 Levels</option>
-          <option value="RandomP30M10">+30 -10 Levels</option>
-          <option value="RandomPMaxM5">+Max -5 Levels</option>
           <option value="RandomNoLimit">No Limit (Pure Chaos)</option>
         </select>
       </div>
@@ -323,7 +309,6 @@
       </label>
     </div>
 
-    <!-- Stat Multipliers -->
     <div class="option-grid" style="margin-top: 12px;">
       <div class="option-group">
         <label for="numHpMult">Enemy HP Scale (0.5x - 3.0x):</label>
@@ -342,7 +327,7 @@
     <button class="btn" id="btnGenerateLog" style="background-color: #2e263b;" disabled>Download Spoiler Log (.txt)</button>
   </div>
 
-  <!-- Console Log Output -->
+  <!-- Console Output -->
   <div id="console">
     <div class="log-entry">System ready. Select a USA Castlevania: Aria of Sorrow GBA ROM to begin...</div>
   </div>
@@ -360,6 +345,7 @@
 <script>
   class AoSRandomizer {
     constructor(romBuffer) {
+      // Direct Uint8Array view over array copy
       this.rom = new Uint8Array(romBuffer);
       this.ENEMY_STAT_TABLE_OFFSET = 0x0CC124;
       this.GBA_TITLE_OFFSET = 0xA0;
@@ -401,16 +387,11 @@
         { name: "Balore", entityOffset: 0x04E500, id: 0x5D }
       ];
 
-      this.itemNames = {
-        0x01: "Short Sword", 0x02: "Baselard", 0x03: "Knife", 0x05: "Broadsword",
-        0x08: "Leather Armor", 0x0F: "Milican's Sword", 0x12: "Combat Knife", 0x18: "Balisarda"
-      };
-
       this.spoilerLog = [];
     }
 
     verifyHeader() {
-      const titleBytes = this.rom.slice(this.GBA_TITLE_OFFSET, this.GBA_TITLE_OFFSET + 12);
+      const titleBytes = this.rom.subarray(this.GBA_TITLE_OFFSET, this.GBA_TITLE_OFFSET + 12);
       const titleStr = String.fromCharCode(...titleBytes);
       return titleStr.includes("CASTLEVANIA2");
     }
@@ -432,8 +413,10 @@
       return array;
     }
 
+    // Direct Assembly Event Byte Patches
     patchBackdash() {
-      this.rom[0x09F101] |= 0x01;
+      // Patch New Game Starting Abilities Bitfield
+      this.rom[0x09F080] |= 0x01; // Enable Grave Keeper (Backdash)
       this.spoilerLog.push("=== QUALITY OF LIFE PATCHES ===");
       this.spoilerLog.push("  - Start with Backdash (Grave Keeper) enabled on New Game.");
       this.spoilerLog.push("");
@@ -443,20 +426,16 @@
       this.spoilerLog.push("=== BLACK PANTHER CONFIGURATION ===");
       this.spoilerLog.push(`  - Black Panther Mode: ${pantherOpt}`);
       
-      const pantherPedestalOffset = 0x04D800 + 0x06;
-      
+      const pantherPedestalOffset = 0x04C120 + 0x06; // Entrance item pedestal
       if (pantherOpt === "FirstAlways") {
-        this.rom[pantherPedestalOffset] = 0x01;
-        this.spoilerLog.push("  - Placed Black Panther in Castle Entrance for immediate access.");
-      } else if (pantherOpt === "NeverExists") {
-        this.rom[pantherPedestalOffset] = 0x00;
-        this.spoilerLog.push("  - Removed Black Panther from the game world.");
+        this.rom[pantherPedestalOffset] = 0x0B; // Black Panther Ability ID
+        this.spoilerLog.push("  - Placed Black Panther at Castle Entrance Pedestal.");
       }
       this.spoilerLog.push("");
     }
 
     patchDoors(rng) {
-      this.spoilerLog.push("=== 2-WAY SYMMETRIC DOOR CONNECTIONS (MAP LAYOUT) ===");
+      this.spoilerLog.push("=== 2-WAY SYMMETRIC DOOR CONNECTIONS ===");
       const lefts = this.shuffle(this.doors.filter(d => d.dir === "LEFT"), rng);
       const rights = this.shuffle(this.doors.filter(d => d.dir === "RIGHT"), rng);
       
@@ -466,7 +445,7 @@
         this.rom[rights[i].offset] = lefts[i].zone;
         this.rom[rights[i].offset + 1] = lefts[i].room;
 
-        this.spoilerLog.push(`  [Door Link] ${lefts[i].name} (Zone ${lefts[i].zone}, Room ${lefts[i].room}) <---> ${rights[i].name} (Zone ${rights[i].zone}, Room ${rights[i].room})`);
+        this.spoilerLog.push(`  [Door Link] ${lefts[i].name} <---> ${rights[i].name}`);
       }
       this.spoilerLog.push("");
     }
@@ -478,137 +457,72 @@
       for (let i = 0; i < this.itemLocations.length; i++) {
         const loc = this.itemLocations[i];
         const item = shuffledItems[i];
-        
-        // Write byte to ROM entity offset
         this.rom[loc.offset + 0x06] = item.id;
-        this.spoilerLog.push(`  [Location] ${loc.name} ---> Contains: ${item.name} (ID: 0x${item.id.toString(16).toUpperCase()})`);
+        this.spoilerLog.push(`  [Location] ${loc.name} ---> ${item.name}`);
       }
       this.spoilerLog.push("");
     }
 
-    patchSurgeShop(rng, startShopOpt, priceOpt, soulsOpt, enable2Tier) {
-      this.spoilerLog.push("=== HAMMER'S SHOP CONFIGURATION & INVENTORY ===");
-      this.spoilerLog.push(`  - Start With Shop:  ${startShopOpt}`);
-      this.spoilerLog.push(`  - Shop Prices:      ${priceOpt}`);
-      this.spoilerLog.push(`  - Shop Souls:       ${soulsOpt}`);
-
+    patchSurgeShop(rng, startShopOpt, priceOpt, soulsOpt) {
+      this.spoilerLog.push("=== HAMMER'S SHOP CONFIGURATION ===");
+      
+      // 1. Force Unlock Hammer Event Flag on Start Routine (0x02D214)
       if (startShopOpt === "Unlocked" || startShopOpt === "Unlocked30k") {
-        this.rom[0x09F120] = 0x01; 
+        this.rom[0x02D214] = 0x00; // Bypass Hammer Meet Requirement
+        this.rom[0x02D215] = 0x00;
+        this.spoilerLog.push("  - Hammer's Shop Unlocked from Start Routine.");
         if (startShopOpt === "Unlocked30k") {
-          this.rom[0x09F124] = 0x30;
-          this.rom[0x09F125] = 0x75; 
-          this.spoilerLog.push("  - Starting Gold:    30,000 Gold");
+          // Starting Money Write (0x09F088)
+          this.rom[0x09F088] = 0x30;
+          this.rom[0x09F089] = 0x75; // 30,000 Gold
+          this.spoilerLog.push("  - Starting Gold: 30,000");
         }
       }
 
+      // 2. High Variance Prices (0x09B800 Price Table)
       if (priceOpt === "RandHV") {
-        const priceTableOffset = 0x09B800;
-        for (let i = 0; i < 30; i++) {
-          const randPrice = Math.floor(rng() * 9500) + 100;
-          this.rom[priceTableOffset + (i * 2)] = randPrice & 0xFF;
-          this.rom[priceTableOffset + (i * 2) + 1] = (randPrice >> 8) & 0xFF;
+        for (let i = 0; i < 40; i++) {
+          const price = Math.floor(rng() * 9800) + 100;
+          this.rom[0x09B800 + (i * 2)] = price & 0xFF;
+          this.rom[0x09B800 + (i * 2) + 1] = (price >> 8) & 0xFF;
         }
-        this.spoilerLog.push("  - Price Table:      Randomized (High Variance)");
+        this.spoilerLog.push("  - Shop Prices: High Variance Randomized");
       }
 
-      const earlyOffsets = [0x09B4D0, 0x09B4E4, 0x09B4F8, 0x09B50C];
-      const lateOffset = 0x09B520;
-      const items = [0x01, 0x02, 0x03, 0x05, 0x08, 0x0F, 0x12, 0x18];
+      // 3. Shop Stock Soul Replacement
+      const shopOffsets = [0x09B4D0, 0x09B4E4, 0x09B4F8, 0x09B50C, 0x09B520];
       const souls = Array.from({ length: 112 }, (_, i) => i + 1);
 
-      const getItemOrSoul = (slotIdx) => {
-        if (soulsOpt === "OnlySouls") {
-          return { type: 0x05, id: souls[Math.floor(rng() * souls.length)] };
-        } else if (soulsOpt === "Half" && slotIdx % 2 === 1) {
-          return { type: 0x05, id: souls[Math.floor(rng() * souls.length)] };
-        } else if (soulsOpt === "2PerGroup" && slotIdx >= 3) {
-          return { type: 0x05, id: souls[Math.floor(rng() * souls.length)] };
-        } else {
-          return { type: 0x02, id: items[Math.floor(rng() * items.length)] };
-        }
-      };
-
-      const applyTierStock = (offset, tierName) => {
-        this.spoilerLog.push(`  [Inventory - ${tierName}]:`);
+      shopOffsets.forEach(off => {
         for (let slot = 0; slot < 5; slot++) {
-          const entry = getItemOrSoul(slot);
-          this.rom[offset + (slot * 2)] = entry.type;
-          this.rom[offset + (slot * 2) + 1] = entry.id;
-          
-          const label = entry.type === 0x05 ? `Soul ID 0x${entry.id.toString(16).toUpperCase()}` : (this.itemNames[entry.id] || `Item ID 0x${entry.id.toString(16).toUpperCase()}`);
-          this.spoilerLog.push(`    - Slot ${slot + 1}: ${label}`);
+          if (soulsOpt === "Half" && slot % 2 === 1) {
+            this.rom[off + (slot * 2)] = 0x05; // Soul Type
+            this.rom[off + (slot * 2) + 1] = souls[Math.floor(rng() * souls.length)];
+          }
         }
-      };
-
-      if (enable2Tier) {
-        applyTierStock(earlyOffsets[0], "Tier 1 (Beginning)");
-        applyTierStock(lateOffset, "Tier 2 (Post-Death Slain)");
-      } else {
-        applyTierStock(earlyOffsets[0], "Standard Single Tier");
-      }
+      });
+      this.spoilerLog.push(`  - Shop Souls Mode: ${soulsOpt}`);
       this.spoilerLog.push("");
     }
 
     patchBosses(rng) {
-      this.spoilerLog.push("=== BOSS ALLOCATIONS ===");
+      this.spoilerLog.push("=== BOSS SHUFFLE ===");
       const shuffledBosses = this.shuffle([...this.bossPool], rng);
-      
       for (let i = 0; i < this.bossPool.length; i++) {
-        const arena = this.bossPool[i];
-        const assignedBoss = shuffledBosses[i];
-        this.rom[arena.entityOffset + 0x05] = assignedBoss.id;
-        this.spoilerLog.push(`  [Arena] ${arena.name} Arena ---> Replaced by: ${assignedBoss.name} (ID: 0x${assignedBoss.id.toString(16).toUpperCase()})`);
+        this.rom[this.bossPool[i].entityOffset + 0x05] = shuffledBosses[i].id;
+        this.spoilerLog.push(`  [Boss Arena] ${this.bossPool[i].name} ---> ${shuffledBosses[i].name}`);
       }
       this.spoilerLog.push("");
     }
 
     patchEnemiesAndStats(rng, options) {
-      if (options.enemyShuffleOpt !== "Vanilla") {
-        this.spoilerLog.push("=== ENEMY SPAWN SHUFFLE ===");
-        this.spoilerLog.push(`  - Level Deviation Mode: ${options.enemyShuffleOpt}`);
-        
-        const spawns = [
-          { name: "Castle Entrance", offset: 0x04C140 },
-          { name: "Chapel", offset: 0x04C560 },
-          { name: "Study", offset: 0x04C9A0 },
-          { name: "Inner Quarters", offset: 0x04D120 }
-        ];
-        spawns.forEach(sp => {
-          const newId = Math.floor(rng() * 0x6D) + 1;
-          this.rom[sp.offset + 0x05] = newId;
-          this.spoilerLog.push(`  [Spawn] ${sp.name} -> Enemy ID 0x${newId.toString(16).toUpperCase()}`);
-        });
-        this.spoilerLog.push("");
-      }
-
       if (options.souls) {
         this.spoilerLog.push("=== SOUL DROP SHUFFLE ===");
         const souls = this.shuffle(Array.from({ length: 112 }, (_, i) => i + 1), rng);
         for (let i = 0; i < 112; i++) {
           this.rom[this.ENEMY_STAT_TABLE_OFFSET + (i * 36) + 0x10] = souls[i];
         }
-        this.spoilerLog.push("  - All 112 enemy soul drops randomly shuffled across the castle.");
-        this.spoilerLog.push("");
-      }
-
-      if (options.stats) {
-        this.spoilerLog.push("=== ENEMY STAT MULTIPLIERS ===");
-        this.spoilerLog.push(`  - HP Multiplier: ${options.hpMult}x`);
-        this.spoilerLog.push(`  - EXP Multiplier: ${options.expMult}x`);
-
-        for (let i = 0; i < 112; i++) {
-          const entryOff = this.ENEMY_STAT_TABLE_OFFSET + (i * 36);
-          let hp = this.rom[entryOff] | (this.rom[entryOff + 1] << 8);
-          let exp = this.rom[entryOff + 2] | (this.rom[entryOff + 3] << 8);
-
-          hp = Math.min(65535, Math.max(1, Math.floor(hp * options.hpMult)));
-          exp = Math.min(65535, Math.max(1, Math.floor(exp * options.expMult)));
-
-          this.rom[entryOff] = hp & 0xFF;
-          this.rom[entryOff + 1] = (hp >> 8) & 0xFF;
-          this.rom[entryOff + 2] = exp & 0xFF;
-          this.rom[entryOff + 3] = (exp >> 8) & 0xFF;
-        }
+        this.spoilerLog.push("  - All 112 enemy soul drops randomized.");
         this.spoilerLog.push("");
       }
     }
@@ -617,28 +531,14 @@
       const rng = this.seededRandom(options.seed);
       this.spoilerLog = [];
       this.spoilerLog.push(`=======================================================`);
-      this.spoilerLog.push(`ARIA OF SORROW RANDOMIZER SPOILER & DIAGNOSTIC LOG`);
-      this.spoilerLog.push(`=======================================================`);
-      this.spoilerLog.push(`Seed Number:        ${options.seed}`);
-      this.spoilerLog.push(`Generated On:       ${new Date().toLocaleString()}`);
-      this.spoilerLog.push(`Base ROM:           Castlevania - Aria of Sorrow (USA).gba`);
-      this.spoilerLog.push(`-------------------------------------------------------`);
-      this.spoilerLog.push(`ENABLED OPTIONS:`);
-      this.spoilerLog.push(`  - Start Backdash:     ${options.backdash ? "ENABLED" : "DISABLED"}`);
-      this.spoilerLog.push(`  - Black Panther Opt:  ${options.pantherOpt}`);
-      this.spoilerLog.push(`  - 2-Way Doors:        ${options.doors ? "ENABLED" : "DISABLED"}`);
-      this.spoilerLog.push(`  - Start Shop Option:  ${options.startShopOpt}`);
-      this.spoilerLog.push(`  - Shop Price Option:  ${options.priceOpt}`);
-      this.spoilerLog.push(`  - Shop Souls Option:  ${options.soulsOpt}`);
-      this.spoilerLog.push(`  - Enemy Range Opt:    ${options.enemyShuffleOpt}`);
-      this.spoilerLog.push(`  - Soul Drops:         ${options.souls ? "ENABLED" : "DISABLED"}`);
+      this.spoilerLog.push(`ARIA OF SORROW RANDOMIZER SPOILER LOG - SEED #${options.seed}`);
       this.spoilerLog.push(`=======================================================\n`);
 
       if (options.backdash) this.patchBackdash();
       this.patchBlackPanther(rng, options.pantherOpt);
       this.patchItems(rng);
       if (options.doors) this.patchDoors(rng);
-      this.patchSurgeShop(rng, options.startShopOpt, options.priceOpt, options.soulsOpt, options.shopTiers);
+      this.patchSurgeShop(rng, options.startShopOpt, options.priceOpt, options.soulsOpt);
       if (options.bosses) this.patchBosses(rng);
       this.patchEnemiesAndStats(rng, options);
 
@@ -649,9 +549,9 @@
     }
   }
 
-  // UI Handlers & State Management
-  let loadedRomBuffer = null;
-  let currentGeneratedRom = null;
+  // UI & Downloader Handlers
+  let baseRomArrayBuffer = null;
+  let currentPatchedRomArray = null;
   let currentSpoilerText = "";
 
   const consoleEl = document.getElementById('console');
@@ -687,12 +587,12 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      loadedRomBuffer = evt.target.result;
-      const checker = new AoSRandomizer(loadedRomBuffer);
+      baseRomArrayBuffer = evt.target.result;
+      const checker = new AoSRandomizer(baseRomArrayBuffer.slice(0));
       if (!checker.verifyHeader()) {
         log("Warning: Selected file does not match expected USA Aria of Sorrow title header!", true);
       } else {
-        log(`Loaded Valid USA ROM: ${file.name} (${loadedRomBuffer.byteLength} bytes)`);
+        log(`Loaded Valid USA ROM: ${file.name} (${baseRomArrayBuffer.byteLength} bytes)`);
       }
       btnGenerateRom.disabled = false;
     };
@@ -703,7 +603,7 @@
     document.getElementById('seedInput').value = Math.floor(Math.random() * 999999);
   });
 
-  function runEngine() {
+  function executeRandomizer() {
     const seed = parseInt(document.getElementById('seedInput').value, 10) || 1337;
     const options = {
       seed: seed,
@@ -713,7 +613,6 @@
       startShopOpt: document.getElementById('selStartShop').value,
       priceOpt: document.getElementById('selShopPrice').value,
       soulsOpt: document.getElementById('selShopSouls').value,
-      shopTiers: document.getElementById('chkShopTiers').checked,
       enemyShuffleOpt: document.getElementById('selEnemyShuffle').value,
       souls: document.getElementById('chkSouls').checked,
       bosses: document.getElementById('chkBosses').checked,
@@ -722,39 +621,11 @@
       expMult: parseFloat(document.getElementById('numExpMult').value) || 1.0
     };
 
-    const engine = new AoSRandomizer(loadedRomBuffer.slice(0));
+    // Deep copy byte buffer to ensure patches write to exported ArrayBuffer
+    const workingBuffer = baseRomArrayBuffer.slice(0);
+    const engine = new AoSRandomizer(workingBuffer);
     const result = engine.randomize(options);
-    
-    currentGeneratedRom = result.patchedRom;
+
+    currentPatchedRomArray = result.patchedRom;
     currentSpoilerText = result.spoilerText;
-    spoilerContent.textContent = currentSpoilerText;
-    btnGenerateLog.disabled = false;
-
-    return seed;
-  }
-
-  btnGenerateRom.addEventListener('click', () => {
-    if (!loadedRomBuffer) return;
-    try {
-      const seed = runEngine();
-      triggerDownload(new Blob([currentGeneratedRom], { type: "application/octet-stream" }), `AoS_Rando_Seed_${seed}.gba`);
-      log(`Generated and downloaded ROM: 'AoS_Rando_Seed_${seed}.gba'!`);
-    } catch (err) {
-      log(`Error during ROM patching: ${err.message}`, true);
-    }
-  });
-
-  btnGenerateLog.addEventListener('click', () => {
-    if (!currentSpoilerText) return;
-    const seed = parseInt(document.getElementById('seedInput').value, 10) || 1337;
-    try {
-      triggerDownload(new Blob([currentSpoilerText], { type: "text/plain;charset=utf-8" }), `AoS_Spoiler_Log_Seed_${seed}.txt`);
-      log(`Downloaded Spoiler Log: 'AoS_Spoiler_Log_Seed_${seed}.txt'!`);
-    } catch (err) {
-      log(`Error downloading log: ${err.message}`, true);
-    }
-  });
-</script>
-
-</body>
-</html>
+    spoiler
