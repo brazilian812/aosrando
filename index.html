@@ -18,15 +18,16 @@
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg-color);
       color: var(--text);
       margin: 0;
-      padding: 20px;
+      padding: 15px;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
+      box-sizing: border-box;
     }
 
     .container {
@@ -35,22 +36,23 @@
       border-radius: 8px;
       width: 100%;
       max-width: 780px;
-      padding: 30px;
+      padding: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      box-sizing: border-box;
     }
 
     h1 {
       color: #ff4d4d;
       text-align: center;
       margin-top: 0;
-      font-size: 1.8rem;
+      font-size: 1.6rem;
       letter-spacing: 1px;
       text-transform: uppercase;
       border-bottom: 2px solid var(--border);
-      padding-bottom: 15px;
+      padding-bottom: 12px;
     }
 
-    .section { margin-bottom: 20px; }
+    .section { margin-bottom: 18px; }
 
     label {
       display: block;
@@ -61,12 +63,13 @@
 
     input[type="file"], input[type="number"], input[type="text"], select {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       background-color: #0b0910;
       border: 1px solid var(--border);
       color: var(--text);
-      border-radius: 4px;
+      border-radius: 6px;
       box-sizing: border-box;
+      font-size: 16px; /* Prevents iOS auto-zoom */
     }
 
     .checkbox-grid {
@@ -86,13 +89,21 @@
     .checkbox-label input {
       margin-right: 10px;
       accent-color: var(--accent);
+      width: 20px;
+      height: 20px;
     }
 
     .option-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 15px;
+      gap: 12px;
       margin-top: 10px;
+    }
+
+    @media (max-width: 600px) {
+      .option-grid, .checkbox-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .option-group label {
@@ -111,31 +122,37 @@
       white-space: nowrap;
     }
 
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
     button.btn {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       background-color: var(--accent);
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 1rem;
       font-weight: bold;
       cursor: pointer;
-      transition: background-color 0.2s;
+      transition: background-color 0.2s, opacity 0.2s;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    button.btn:hover { background-color: var(--accent-hover); }
+    button.btn:hover, button.btn:active { background-color: var(--accent-hover); }
 
-    button.btn:disabled {
-      background-color: #3d1b1b;
-      cursor: not-allowed;
-      opacity: 0.6;
+    button.btn-secondary {
+      background-color: #2e263b;
     }
 
     #console {
       background-color: #060508;
       border: 1px solid var(--border);
-      border-radius: 4px;
+      border-radius: 6px;
       padding: 12px;
       height: 110px;
       overflow-y: auto;
@@ -154,11 +171,11 @@
       border: 1px solid var(--border);
       color: var(--text-dim);
       width: 100%;
-      padding: 10px 15px;
+      padding: 12px 15px;
       text-align: left;
       font-weight: bold;
       cursor: pointer;
-      border-radius: 4px;
+      border-radius: 6px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -172,7 +189,7 @@
       background-color: var(--drawer-bg);
       border: 1px solid transparent;
       border-top: none;
-      border-radius: 0 0 4px 4px;
+      border-radius: 0 0 6px 6px;
     }
 
     .drawer-content.open {
@@ -199,7 +216,7 @@
   <!-- ROM Upload -->
   <div class="section">
     <label for="romFile">1. Select USA GBA ROM File:</label>
-    <input type="file" id="romFile" accept=".gba">
+    <input type="file" id="romFile" accept=".gba,.bin">
   </div>
 
   <!-- Seed Configuration -->
@@ -315,4 +332,153 @@
         <input type="number" id="numHpMult" value="1.0" step="0.1" min="0.5" max="3.0">
       </div>
       <div class="option-group">
-        <label for="num
+        <label for="numExpMult">Enemy EXP Scale (0.5x - 3.0x):</label>
+        <input type="number" id="numExpMult" value="1.0" step="0.1" min="0.5" max="3.0">
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons (Always Visible) -->
+  <div class="action-buttons">
+    <button class="btn" id="btnGenerateRom" type="button">1. Generate & Download ROM (.gba)</button>
+    <button class="btn btn-secondary" id="btnGenerateLog" type="button">2. Download Spoiler Log (.txt)</button>
+  </div>
+
+  <!-- Console Output -->
+  <div id="console">
+    <div class="log-entry">System ready. Select your Castlevania: Aria of Sorrow GBA ROM to begin...</div>
+  </div>
+
+  <!-- Collapsible Spoiler Drawer -->
+  <button class="drawer-toggle" id="btnToggleSpoiler" type="button">
+    <span>Spoiler Log Preview</span>
+    <span id="drawerArrow">▼</span>
+  </button>
+  <div class="drawer-content" id="spoilerDrawer">
+    <pre class="spoiler-text" id="spoilerContent">No seed generated yet. Run the randomizer to view the spoiler log here.</pre>
+  </div>
+</div>
+
+<script>
+  class AoSRandomizer {
+    constructor(romUint8Array) {
+      this.rom = romUint8Array;
+      this.ENEMY_STAT_TABLE_OFFSET = 0x0CC124;
+      this.GBA_TITLE_OFFSET = 0xA0;
+
+      this.doors = [
+        { name: "Entrance_West", offset: 0x4B3A8, dir: "LEFT", zone: 0, room: 1 },
+        { name: "Entrance_East", offset: 0x4B3B0, dir: "RIGHT", zone: 0, room: 2 },
+        { name: "Entrance_Top", offset: 0x4B3B8, dir: "TOP", zone: 0, room: 5 },
+        { name: "Chapel_West", offset: 0x4B410, dir: "LEFT", zone: 1, room: 2 },
+        { name: "Chapel_East", offset: 0x4B418, dir: "RIGHT", zone: 1, room: 3 },
+        { name: "Chapel_Top", offset: 0x4B420, dir: "TOP", zone: 1, room: 8 },
+        { name: "Study_Right", offset: 0x4B480, dir: "RIGHT", zone: 2, room: 1 },
+        { name: "Study_Left", offset: 0x4B488, dir: "LEFT", zone: 2, room: 4 },
+        { name: "Study_Drop", offset: 0x4B490, dir: "BOTTOM", zone: 2, room: 6 },
+        { name: "Garden_Drop", offset: 0x4B600, dir: "BOTTOM", zone: 5, room: 1 },
+        { name: "Garden_Rise", offset: 0x4B608, dir: "TOP", zone: 5, room: 3 }
+      ];
+
+      this.itemLocations = [
+        { name: "Castle Entrance (Room 0,5)", offset: 0x4C120 },
+        { name: "Chapel (Room 1,8)", offset: 0x4C540 },
+        { name: "Study (Room 2,4)", offset: 0x4C980 },
+        { name: "Inner Quarters (Room 4,7)", offset: 0x4D100 },
+        { name: "Floating Garden (Room 5,3)", offset: 0x4D840 }
+      ];
+
+      this.keyItems = [
+        { id: 0x01, name: "Flying Armor" },
+        { id: 0x03, name: "Double Jump (Malphas)" },
+        { id: 0x04, name: "Skula" },
+        { id: 0x05, name: "Giant Bat" },
+        { id: 0x4A, name: "Ancient Book 1" }
+      ];
+
+      this.bossPool = [
+        { name: "Headhunter", entityOffset: 0x04D160, id: 0x58 },
+        { name: "Death", entityOffset: 0x04DD20, id: 0x5B },
+        { name: "Legion", entityOffset: 0x04E100, id: 0x5C },
+        { name: "Balore", entityOffset: 0x04E500, id: 0x5D }
+      ];
+
+      this.spoilerLog = [];
+    }
+
+    verifyHeader() {
+      const titleBytes = this.rom.subarray(this.GBA_TITLE_OFFSET, this.GBA_TITLE_OFFSET + 12);
+      const titleStr = String.fromCharCode(...titleBytes);
+      return titleStr.includes("CASTLEVANIA2");
+    }
+
+    seededRandom(seed) {
+      let s = seed;
+      return () => {
+        s = (s * 9301 + 49297) % 233280;
+        return s / 233280;
+      };
+    }
+
+    shuffle(array, rng) {
+      let m = array.length, t, i;
+      while (m) {
+        i = Math.floor(rng() * m--);
+        t = array[m]; array[m] = array[i]; array[i] = t;
+      }
+      return array;
+    }
+
+    patchBackdash() {
+      this.rom[0x09F080] |= 0x01;
+      this.spoilerLog.push("=== QUALITY OF LIFE PATCHES ===");
+      this.spoilerLog.push("  - Start with Backdash (Grave Keeper) enabled on New Game.");
+      this.spoilerLog.push("");
+    }
+
+    patchBlackPanther(rng, pantherOpt) {
+      this.spoilerLog.push("=== BLACK PANTHER CONFIGURATION ===");
+      this.spoilerLog.push(`  - Black Panther Mode: ${pantherOpt}`);
+      
+      const pantherPedestalOffset = 0x04C120 + 0x06;
+      if (pantherOpt === "FirstAlways") {
+        this.rom[pantherPedestalOffset] = 0x0B;
+        this.spoilerLog.push("  - Placed Black Panther at Castle Entrance Pedestal.");
+      }
+      this.spoilerLog.push("");
+    }
+
+    patchDoors(rng) {
+      this.spoilerLog.push("=== 2-WAY SYMMETRIC DOOR CONNECTIONS ===");
+      const lefts = this.shuffle(this.doors.filter(d => d.dir === "LEFT"), rng);
+      const rights = this.shuffle(this.doors.filter(d => d.dir === "RIGHT"), rng);
+      
+      for (let i = 0; i < Math.min(lefts.length, rights.length); i++) {
+        this.rom[lefts[i].offset] = rights[i].zone;
+        this.rom[lefts[i].offset + 1] = rights[i].room;
+        this.rom[rights[i].offset] = lefts[i].zone;
+        this.rom[rights[i].offset + 1] = lefts[i].room;
+
+        this.spoilerLog.push(`  [Door Link] ${lefts[i].name} <---> ${rights[i].name}`);
+      }
+      this.spoilerLog.push("");
+    }
+
+    patchItems(rng) {
+      this.spoilerLog.push("=== KEY ITEM & ABILITY LOCATIONS ===");
+      const shuffledItems = this.shuffle([...this.keyItems], rng);
+      
+      for (let i = 0; i < this.itemLocations.length; i++) {
+        const loc = this.itemLocations[i];
+        const item = shuffledItems[i];
+        this.rom[loc.offset + 0x06] = item.id;
+        this.spoilerLog.push(`  [Location] ${loc.name} ---> ${item.name}`);
+      }
+      this.spoilerLog.push("");
+    }
+
+    patchSurgeShop(rng, startShopOpt, priceOpt, soulsOpt) {
+      this.spoilerLog.push("=== HAMMER'S SHOP CONFIGURATION ===");
+      
+      if (startShopOpt === "Unlocked" || startShopOpt === "Unlocked30k") {
+        this.rom
