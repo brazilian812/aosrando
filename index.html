@@ -69,7 +69,7 @@
       color: var(--text);
       border-radius: 6px;
       box-sizing: border-box;
-      font-size: 16px; /* Prevents iOS auto-zoom */
+      font-size: 16px;
     }
 
     .checkbox-grid {
@@ -139,7 +139,7 @@
       font-size: 1rem;
       font-weight: bold;
       cursor: pointer;
-      transition: background-color 0.2s, opacity 0.2s;
+      transition: background-color 0.2s;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -216,7 +216,7 @@
   <!-- ROM Upload -->
   <div class="section">
     <label for="romFile">1. Select USA GBA ROM File:</label>
-    <input type="file" id="romFile" accept=".gba,.bin">
+    <input type="file" id="romFile" accept="*/*">
   </div>
 
   <!-- Seed Configuration -->
@@ -338,7 +338,7 @@
     </div>
   </div>
 
-  <!-- Action Buttons (Always Visible) -->
+  <!-- Action Buttons -->
   <div class="action-buttons">
     <button class="btn" id="btnGenerateRom" type="button">1. Generate & Download ROM (.gba)</button>
     <button class="btn btn-secondary" id="btnGenerateLog" type="button">2. Download Spoiler Log (.txt)</button>
@@ -481,4 +481,205 @@
       this.spoilerLog.push("=== HAMMER'S SHOP CONFIGURATION ===");
       
       if (startShopOpt === "Unlocked" || startShopOpt === "Unlocked30k") {
-        this.rom
+        this.rom[0x02D214] = 0x00;
+        this.rom[0x02D215] = 0x00;
+        this.spoilerLog.push("  - Hammer's Shop Unlocked from Start Routine.");
+        if (startShopOpt === "Unlocked30k") {
+          this.rom[0x09F088] = 0x30;
+          this.rom[0x09F089] = 0x75;
+          this.spoilerLog.push("  - Starting Gold: 30,000");
+        }
+      }
+
+      if (priceOpt === "RandHV") {
+        for (let i = 0; i < 40; i++) {
+          const price = Math.floor(rng() * 9800) + 100;
+          this.rom[0x09B800 + (i * 2)] = price & 0xFF;
+          this.rom[0x09B800 + (i * 2) + 1] = (price >> 8) & 0xFF;
+        }
+        this.spoilerLog.push("  - Shop Prices: High Variance Randomized");
+      }
+
+      const shopOffsets = [0x09B4D0, 0x09B4E4, 0x09B4F8, 0x09B50C, 0x09B520];
+      const souls = Array.from({ length: 112 }, (_, i) => i + 1);
+
+      shopOffsets.forEach(off => {
+        for (let slot = 0; slot < 5; slot++) {
+          if (soulsOpt === "Half" && slot % 2 === 1) {
+            this.rom[off + (slot * 2)] = 0x05;
+            this.rom[off + (slot * 2) + 1] = souls[Math.floor(rng() * souls.length)];
+          }
+        }
+      });
+      this.spoilerLog.push(`  - Shop Souls Mode: ${soulsOpt}`);
+      this.spoilerLog.push("");
+    }
+
+    patchBosses(rng) {
+      this.spoilerLog.push("=== BOSS SHUFFLE ===");
+      const shuffledBosses = this.shuffle([...this.bossPool], rng);
+      for (let i = 0; i < this.bossPool.length; i++) {
+        this.rom[this.bossPool[i].entityOffset + 0x05] = shuffledBosses[i].id;
+        this.spoilerLog.push(`  [Boss Arena] ${this.bossPool[i].name} ---> ${shuffledBosses[i].name}`);
+      }
+      this.spoilerLog.push("");
+    }
+
+    patchEnemiesAndStats(rng, options) {
+      if (options.souls) {
+        this.spoilerLog.push("=== SOUL DROP SHUFFLE ===");
+        const souls = this.shuffle(Array.from({ length: 112 }, (_, i) => i + 1), rng);
+        for (let i = 0; i < 112; i++) {
+          this.rom[this.ENEMY_STAT_TABLE_OFFSET + (i * 36) + 0x10] = souls[i];
+        }
+        this.spoilerLog.push("  - All 112 enemy soul drops randomized.");
+        this.spoilerLog.push("");
+      }
+    }
+
+    randomize(options) {
+      const rng = this.seededRandom(options.seed);
+      this.spoilerLog = [];
+      this.spoilerLog.push(`=======================================================`);
+      this.spoilerLog.push(`ARIA OF SORROW RANDOMIZER SPOILER LOG - SEED #${options.seed}`);
+      this.spoilerLog.push(`=======================================================\n`);
+
+      if (options.backdash) this.patchBackdash();
+      this.patchBlackPanther(rng, options.pantherOpt);
+      this.patchItems(rng);
+      if (options.doors) this.patchDoors(rng);
+      this.patchSurgeShop(rng, options.startShopOpt, options.priceOpt, options.soulsOpt);
+      if (options.bosses) this.patchBosses(rng);
+      this.patchEnemiesAndStats(rng, options);
+
+      return {
+        patchedRom: this.rom,
+        spoilerText: this.spoilerLog.join("\n")
+      };
+    }
+  }
+
+  // App Controller
+  let rawLoadedRomBuffer = null;
+  let activePatchedRomArray = null;
+  let activeSpoilerText = "";
+
+  const consoleEl = document.getElementById('console');
+  const btnGenerateRom = document.getElementById('btnGenerateRom');
+  const btnGenerateLog = document.getElementById('btnGenerateLog');
+  const btnRandomSeed = document.getElementById('btnRandomSeed');
+  const btnToggleSpoiler = document.getElementById('btnToggleSpoiler');
+  const spoilerDrawer = document.getElementById('spoilerDrawer');
+  const spoilerContent = document.getElementById('spoilerContent');
+  const drawerArrow = document.getElementById('drawerArrow');
+  const romFileInput = document.getElementById('romFile');
+
+  function log(msg, isError = false) {
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${isError ? 'log-error' : ''}`;
+    entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    consoleEl.appendChild(entry);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function triggerDownload(blob, filename) {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  btnToggleSpoiler.addEventListener('click', () => {
+    spoilerDrawer.classList.toggle('open');
+    drawerArrow.textContent = spoilerDrawer.classList.contains('open') ? '▲' : '▼';
+  });
+
+  romFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    log(`Reading file: ${file.name}...`);
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      rawLoadedRomBuffer = evt.target.result;
+      const testView = new Uint8Array(rawLoadedRomBuffer.slice(0));
+      const checker = new AoSRandomizer(testView);
+      
+      if (!checker.verifyHeader()) {
+        log("Warning: Header mismatch! Ensure you loaded a clean USA GBA ROM.", true);
+      } else {
+        log(`Loaded Valid USA ROM (${rawLoadedRomBuffer.byteLength} bytes)`);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  btnRandomSeed.addEventListener('click', () => {
+    document.getElementById('seedInput').value = Math.floor(Math.random() * 999999);
+  });
+
+  function processRandomization() {
+    if (!rawLoadedRomBuffer) {
+      log("Error: Please select your GBA ROM file first!", true);
+      return null;
+    }
+
+    const seed = parseInt(document.getElementById('seedInput').value, 10) || 1337;
+    const options = {
+      seed: seed,
+      backdash: document.getElementById('chkBackdash').checked,
+      pantherOpt: document.getElementById('selPanther').value,
+      doors: document.getElementById('chkDoors').checked,
+      startShopOpt: document.getElementById('selStartShop').value,
+      priceOpt: document.getElementById('selShopPrice').value,
+      soulsOpt: document.getElementById('selShopSouls').value,
+      enemyShuffleOpt: document.getElementById('selEnemyShuffle').value,
+      souls: document.getElementById('chkSouls').checked,
+      bosses: document.getElementById('chkBosses').checked,
+      stats: document.getElementById('chkEnemyStats').checked,
+      hpMult: parseFloat(document.getElementById('numHpMult').value) || 1.0,
+      expMult: parseFloat(document.getElementById('numExpMult').value) || 1.0
+    };
+
+    const workingByteView = new Uint8Array(rawLoadedRomBuffer.slice(0));
+    const engine = new AoSRandomizer(workingByteView);
+    const result = engine.randomize(options);
+
+    activePatchedRomArray = result.patchedRom;
+    activeSpoilerText = result.spoilerText;
+    spoilerContent.textContent = activeSpoilerText;
+
+    return seed;
+  }
+
+  btnGenerateRom.addEventListener('click', () => {
+    try {
+      const seed = processRandomization();
+      if (seed !== null) {
+        const romBlob = new Blob([activePatchedRomArray], { type: "application/octet-stream" });
+        triggerDownload(romBlob, `AoS_Rando_Seed_${seed}.gba`);
+        log(`Patched and exported ROM: 'AoS_Rando_Seed_${seed}.gba'!`);
+      }
+    } catch (err) {
+      log(`Error generating ROM: ${err.message}`, true);
+    }
+  });
+
+  btnGenerateLog.addEventListener('click', () => {
+    try {
+      const seed = processRandomization();
+      if (seed !== null) {
+        const txtBlob = new Blob([activeSpoilerText], { type: "text/plain;charset=utf-8" });
+        triggerDownload(txtBlob, `AoS_Spoiler_Log_Seed_${seed}.txt`);
+        log(`Exported Spoiler Log: 'AoS_Spoiler_Log_Seed_${seed}.txt'!`);
+      }
+    } catch (err) {
+      log(`Error downloading log: ${err.message}`, true);
+    }
+  });
+</script>
+
+</body>
+</html>
