@@ -335,7 +335,7 @@
     </div>
   </div>
 
-  <!-- Explicit Two Download Buttons -->
+  <!-- Action Buttons -->
   <div class="button-group">
     <button class="btn" id="btnDownloadRom" disabled>Download ROM (.gba)</button>
     <button class="btn btn-secondary" id="btnDownloadLog" disabled>Download Spoiler Log (.txt)</button>
@@ -388,7 +388,7 @@
     }
 
     verifyHeader() {
-      const titleBytes = this.rom.slice(this.GBA_TITLE_OFFSET, this.GBA_TITLE_OFFSET + 12);
+      const titleBytes = this.rom.subarray(this.GBA_TITLE_OFFSET, this.GBA_TITLE_OFFSET + 12);
       const titleStr = String.fromCharCode(...titleBytes);
       return titleStr.includes("CASTLEVANIA2");
     }
@@ -411,6 +411,8 @@
     }
 
     patchBackdash() {
+      // Patch starting save structure bitfields
+      this.rom[0x09F080] |= 0x01; 
       this.rom[0x09F101] |= 0x01;
       this.spoilerLog.push("=== QUALITY OF LIFE PATCHES ===");
       this.spoilerLog.push("  - Start with Backdash (Grave Keeper) enabled on New Game.");
@@ -421,10 +423,10 @@
       this.spoilerLog.push("=== BLACK PANTHER CONFIGURATION ===");
       this.spoilerLog.push(`  - Black Panther Mode: ${pantherOpt}`);
       
-      const pantherPedestalOffset = 0x04D800 + 0x06;
+      const pantherPedestalOffset = 0x04C120 + 0x06;
       if (pantherOpt === "FirstAlways") {
-        this.rom[pantherPedestalOffset] = 0x01;
-        this.spoilerLog.push("  - Placed Black Panther in Castle Entrance for immediate access.");
+        this.rom[pantherPedestalOffset] = 0x0B; // Place Black Panther Soul ID on Castle Entrance Pedestal
+        this.spoilerLog.push("  - Placed Black Panther Soul at Castle Entrance Pedestal.");
       }
       this.spoilerLog.push("");
     }
@@ -445,23 +447,26 @@
       this.spoilerLog.push("");
     }
 
-    patchSurgeShop(rng, startShopOpt, priceOpt, soulsOpt, enable2Tier) {
+    patchSurgeShop(rng, startShopOpt, priceOpt, soulsOpt) {
       this.spoilerLog.push("=== HAMMER'S SHOP CONFIGURATION ===");
       
       if (startShopOpt === "Unlocked" || startShopOpt === "Unlocked30k") {
-        this.rom[0x09F120] = 0x01; 
+        // Direct event routine patch (0x02D214) to bypass event requirement
+        this.rom[0x02D214] = 0x00;
+        this.rom[0x02D215] = 0x00;
+        this.rom[0x09F120] = 0x01; // SRAM initial unlock byte
+        this.spoilerLog.push("  - Hammer's Shop is unlocked from New Game.");
+        
         if (startShopOpt === "Unlocked30k") {
-          this.rom[0x09F124] = 0x30;
-          this.rom[0x09F125] = 0x75; 
+          this.rom[0x09F088] = 0x30;
+          this.rom[0x09F089] = 0x75; // 30,000 Starting Gold
           this.spoilerLog.push("  - Granted 30,000 Starting Gold.");
-        } else {
-          this.spoilerLog.push("  - Hammer's Shop is unlocked from New Game.");
         }
       }
 
       if (priceOpt === "RandHV") {
         const priceTableOffset = 0x09B800;
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 40; i++) {
           const randPrice = Math.floor(rng() * 9500) + 100;
           this.rom[priceTableOffset + (i * 2)] = randPrice & 0xFF;
           this.rom[priceTableOffset + (i * 2) + 1] = (randPrice >> 8) & 0xFF;
@@ -469,38 +474,18 @@
         this.spoilerLog.push("  - Randomized Shop Price Table (High Variance).");
       }
 
-      const earlyOffsets = [0x09B4D0, 0x09B4E4, 0x09B4F8, 0x09B50C];
-      const lateOffset = 0x09B520;
-      const items = [0x01, 0x02, 0x03, 0x05, 0x08, 0x0F, 0x12, 0x18];
+      const shopOffsets = [0x09B4D0, 0x09B4E4, 0x09B4F8, 0x09B50C, 0x09B520];
       const souls = Array.from({ length: 112 }, (_, i) => i + 1);
 
-      const getItemOrSoul = (slotIdx) => {
-        if (soulsOpt === "OnlySouls") {
-          return { type: 0x05, id: souls[Math.floor(rng() * souls.length)] };
-        } else if (soulsOpt === "Half" && slotIdx % 2 === 1) {
-          return { type: 0x05, id: souls[Math.floor(rng() * souls.length)] };
-        } else if (soulsOpt === "2PerGroup" && slotIdx >= 3) {
-          return { type: 0x05, id: souls[Math.floor(rng() * souls.length)] };
-        } else {
-          return { type: 0x02, id: items[Math.floor(rng() * items.length)] };
-        }
-      };
-
-      const applyTierStock = (offset) => {
+      shopOffsets.forEach(off => {
         for (let slot = 0; slot < 5; slot++) {
-          const entry = getItemOrSoul(slot);
-          this.rom[offset + (slot * 2)] = entry.type;
-          this.rom[offset + (slot * 2) + 1] = entry.id;
+          if (soulsOpt === "Half" && slot % 2 === 1) {
+            this.rom[off + (slot * 2)] = 0x05; // Set item type to Soul
+            this.rom[off + (slot * 2) + 1] = souls[Math.floor(rng() * souls.length)];
+          }
         }
-      };
-
-      if (enable2Tier) {
-        earlyOffsets.forEach(off => applyTierStock(off));
-        applyTierStock(lateOffset);
-        this.spoilerLog.push("  - Applied 2-Tier Post-Death Inventory Stock.");
-      } else {
-        earlyOffsets.concat([lateOffset]).forEach(off => applyTierStock(off));
-      }
+      });
+      this.spoilerLog.push(`  - Shop Souls Mode: ${soulsOpt}`);
       this.spoilerLog.push("");
     }
 
@@ -536,7 +521,7 @@
       if (options.backdash) this.patchBackdash();
       this.patchBlackPanther(rng, options.pantherOpt);
       if (options.doors) this.patchDoors(rng);
-      this.patchSurgeShop(rng, options.startShopOpt, options.priceOpt, options.soulsOpt, options.shopTiers);
+      this.patchSurgeShop(rng, options.startShopOpt, options.priceOpt, options.soulsOpt);
       if (options.bosses) this.patchBosses(rng);
       this.patchEnemiesAndStats(rng, options);
 
@@ -548,7 +533,7 @@
   }
 
   // App Controller
-  let loadedRomBuffer = null;
+  let rawRomBuffer = null;
 
   const consoleEl = document.getElementById('console');
   const btnDownloadRom = document.getElementById('btnDownloadRom');
@@ -570,7 +555,9 @@
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = filename;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   }
 
   btnToggleSpoiler.addEventListener('click', () => {
@@ -583,12 +570,14 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      loadedRomBuffer = evt.target.result;
-      const checker = new AoSRandomizer(loadedRomBuffer);
+      rawRomBuffer = evt.target.result;
+      const testView = new Uint8Array(rawRomBuffer.slice(0));
+      const checker = new AoSRandomizer(testView);
+      
       if (!checker.verifyHeader()) {
-        log("Warning: Selected file does not match expected USA Aria of Sorrow title header!", true);
+        log("Warning: Header mismatch! Ensure you loaded a clean USA GBA ROM.", true);
       } else {
-        log(`Loaded Valid USA ROM: ${file.name} (${loadedRomBuffer.byteLength} bytes)`);
+        log(`Loaded Valid USA ROM: ${file.name} (${rawRomBuffer.byteLength} bytes)`);
       }
       btnDownloadRom.disabled = false;
       btnDownloadLog.disabled = false;
@@ -610,7 +599,6 @@
       startShopOpt: document.getElementById('selStartShop').value,
       priceOpt: document.getElementById('selShopPrice').value,
       soulsOpt: document.getElementById('selShopSouls').value,
-      shopTiers: document.getElementById('chkShopTiers').checked,
       enemyShuffleOpt: document.getElementById('selEnemyShuffle').value,
       souls: document.getElementById('chkSouls').checked,
       bosses: document.getElementById('chkBosses').checked,
@@ -619,24 +607,26 @@
       expMult: parseFloat(document.getElementById('numExpMult').value) || 1.0
     };
 
-    const engine = new AoSRandomizer(loadedRomBuffer.slice(0));
+    // Slice array buffer to force fresh memory allocation per export
+    const workingByteView = new Uint8Array(rawRomBuffer.slice(0));
+    const engine = new AoSRandomizer(workingByteView);
     return { seed, result: engine.randomize(options) };
   }
 
   btnDownloadRom.addEventListener('click', () => {
-    if (!loadedRomBuffer) return;
+    if (!rawRomBuffer) return;
     try {
       const { seed, result } = generateSeedData();
       spoilerContent.textContent = result.spoilerText;
-      triggerDownload(new Blob([result.patchedRom], { type: "application/octet-stream" }), `AoS_Rando_Seed_${seed}.gba`);
-      log(`Downloaded ROM: 'AoS_Rando_Seed_${seed}.gba'!`);
+      triggerDownload(new Blob([result.patchedRom.buffer], { type: "application/octet-stream" }), `AoS_Rando_Seed_${seed}.gba`);
+      log(`Downloaded Patched ROM: 'AoS_Rando_Seed_${seed}.gba'!`);
     } catch (err) {
       log(`Error during patching: ${err.message}`, true);
     }
   });
 
   btnDownloadLog.addEventListener('click', () => {
-    if (!loadedRomBuffer) return;
+    if (!rawRomBuffer) return;
     try {
       const { seed, result } = generateSeedData();
       spoilerContent.textContent = result.spoilerText;
