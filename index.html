@@ -3,17 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aria of Sorrow Map & World Randomizer</title>
+  <title>Castlevania: AoS Item & Soul Randomizer (2018 Engine)</title>
   <style>
     :root {
-      --bg-color: #0d0a12;
-      --card-bg: #16121e;
+      --bg-color: #0c0a10;
+      --card-bg: #16121d;
       --accent: #8b0000;
       --accent-hover: #a80000;
       --text: #e2e2e2;
       --text-dim: #9a98a6;
       --border: #2e263b;
-      --drawer-bg: #100d17;
       --success: #00ff66;
     }
 
@@ -35,8 +34,8 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       width: 100%;
-      max-width: 780px;
-      padding: 30px;
+      max-width: 760px;
+      padding: 25px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.6);
       box-sizing: border-box;
     }
@@ -45,14 +44,14 @@
       color: #ff4d4d;
       text-align: center;
       margin-top: 0;
-      font-size: 1.8rem;
+      font-size: 1.6rem;
       letter-spacing: 1px;
       text-transform: uppercase;
       border-bottom: 2px solid var(--border);
-      padding-bottom: 15px;
+      padding-bottom: 12px;
     }
 
-    .section { margin-bottom: 20px; }
+    .section { margin-bottom: 18px; }
 
     label {
       display: block;
@@ -61,7 +60,7 @@
       color: var(--text);
     }
 
-    input[type="file"], input[type="number"], input[type="text"], select {
+    input[type="file"], input[type="number"], select {
       width: 100%;
       padding: 10px;
       background-color: #0b0910;
@@ -75,7 +74,7 @@
     .checkbox-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 10px;
       margin-top: 10px;
     }
 
@@ -91,19 +90,6 @@
       accent-color: var(--accent);
       width: 18px;
       height: 18px;
-    }
-
-    .option-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin-top: 10px;
-    }
-
-    .option-group label {
-      font-size: 0.85rem;
-      color: var(--text-dim);
-      font-weight: normal;
     }
 
     .seed-row {
@@ -162,7 +148,6 @@
     .log-entry { margin-bottom: 4px; }
     .log-error { color: #ff4d4d; }
 
-    /* Spoiler Drawer */
     .drawer-toggle {
       background-color: #120e18;
       border: 1px solid var(--border);
@@ -183,7 +168,7 @@
       max-height: 0;
       overflow: hidden;
       transition: max-height 0.3s ease-out;
-      background-color: var(--drawer-bg);
+      background-color: #100d17;
       border: 1px solid transparent;
       border-top: none;
       border-radius: 0 0 4px 4px;
@@ -208,11 +193,11 @@
 <body>
 
 <div class="container">
-  <h1>AoS Map & World Randomizer</h1>
+  <h1>AoS Item & Soul Randomizer</h1>
 
   <!-- ROM Upload -->
   <div class="section">
-    <label for="romFile">1. Select USA GBA ROM File:</label>
+    <label for="romFile">1. Select NA Castlevania: Aria of Sorrow GBA ROM:</label>
     <input type="file" id="romFile">
   </div>
 
@@ -225,64 +210,21 @@
     </div>
   </div>
 
-  <!-- Quality of Life & Abilities -->
+  <!-- Randomizer Flags -->
   <div class="section">
-    <label>3. Quality of Life & Abilities:</label>
-    <div class="option-grid">
-      <div class="option-group">
-        <label for="selPanther">Black Panther Setting (panther):</label>
-        <select id="selPanther">
-          <option value="FirstAlways" selected>Always First</option>
-          <option value="Vanilla">Vanilla</option>
-          <option value="AlwaysRand">Always Random</option>
-          <option value="NeverExists">Never Exists</option>
-        </select>
-      </div>
-      <div class="option-group">
-        <label>Start Options:</label>
-        <div style="margin-top: 6px;">
-          <label class="checkbox-label" style="margin-bottom: 6px;">
-            <input type="checkbox" id="chkBackdash" checked> Enable Backdash on Start
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" id="chkSkipIntro" checked> Skip Intro Cutscene
-          </label>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Shop Options -->
-  <div class="section">
-    <label>4. Shop Options (AoS Surge Settings):</label>
-    <div class="option-grid">
-      <div class="option-group">
-        <label for="selStartShop">Start with Shop (startshop):</label>
-        <select id="selStartShop">
-          <option value="Unlocked" selected>Unlocked (Always Start Available)</option>
-          <option value="Unlocked30k">Unlocked + 30k Gold</option>
-          <option value="Vanilla">Vanilla (Locked)</option>
-        </select>
-      </div>
-      <div class="option-group">
-        <label for="selShopPrice">Shop Price (shopprice):</label>
-        <select id="selShopPrice">
-          <option value="RandHV" selected>Random HV (High Variance)</option>
-          <option value="Vanilla">Vanilla</option>
-        </select>
-      </div>
-    </div>
-  </div>
-
-  <!-- Enemy & Boss Features -->
-  <div class="section">
-    <label>5. Enemy & Boss Options:</label>
+    <label>3. Randomizer Options (Abyssonym Flags):</label>
     <div class="checkbox-grid">
       <label class="checkbox-label">
-        <input type="checkbox" id="chkSouls" checked> Randomize Soul Drops
+        <input type="checkbox" id="chkItems" checked> (i) Randomize Items & Abilities
       </label>
       <label class="checkbox-label">
-        <input type="checkbox" id="chkBosses" checked> Randomize Bosses
+        <input type="checkbox" id="chkSouls" checked> (d) Randomize Enemy Souls
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="chkShop" checked> (h) Randomize Hammer's Shop
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="chkStatFix" checked> Fix LCK / Stat Calculation
       </label>
     </div>
   </div>
@@ -295,7 +237,7 @@
 
   <!-- Console Output -->
   <div id="console">
-    <div class="log-entry">System ready. Select a USA Castlevania: Aria of Sorrow GBA ROM to begin...</div>
+    <div class="log-entry">System ready. Select your NA Castlevania: Aria of Sorrow GBA ROM...</div>
   </div>
 
   <!-- Collapsible Spoiler Drawer -->
@@ -304,25 +246,41 @@
     <span id="drawerArrow">▼</span>
   </button>
   <div class="drawer-content" id="spoilerDrawer">
-    <pre class="spoiler-text" id="spoilerContent">No seed generated yet. Load a ROM to preview the spoiler log here.</pre>
+    <pre class="spoiler-text" id="spoilerContent">No seed generated yet. Load a ROM to generate.</pre>
   </div>
 </div>
 
 <script>
-  class AoSRandomizer {
-    constructor(romUint8Array) {
-      this.rom = romUint8Array;
-      this.view = new DataView(this.rom.buffer);
-      this.GBA_TITLE_OFFSET = 0xA0;
+  // Abyssonym 2018 Engine Byte Mapping Constants
+  const GBA_TITLE_OFFSET = 0xA0;
+  const ENEMY_STAT_TABLE = 0x0CC124; // 36 bytes per enemy
+  const NUM_ENEMIES = 112;
+  const SHOP_ITEM_TABLE = 0x09B4D0;
+
+  // Key Ability Souls & Item Pickups (Known 2018 Entity Offsets)
+  const GROUND_ITEM_OFFSETS = [
+    0x04C120, 0x04C1A0, 0x04C240, 0x04C310, 0x04C400,
+    0x04C540, 0x04C620, 0x04C700, 0x04C880, 0x04C980,
+    0x04CA50, 0x04CB20, 0x04CC00, 0x04CD10, 0x04CE00,
+    0x04CF50, 0x04D100, 0x04D250, 0x04D380, 0x04D500,
+    0x04D650, 0x04D840, 0x04D990, 0x04DB00, 0x04DC20
+  ];
+
+  // Ability Souls Pool (Grave Keeper, Flying Armor, Malphas, Skula, Giant Bat, Kicker Skeleton, etc.)
+  const ABILITY_SOULS = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+
+  class AoS2018Randomizer {
+    constructor(romBuffer) {
+      this.rom = new Uint8Array(romBuffer);
       this.spoilerLog = [];
     }
 
     verifyHeader() {
-      let titleStr = "";
+      let title = "";
       for (let i = 0; i < 12; i++) {
-        titleStr += String.fromCharCode(this.rom[this.GBA_TITLE_OFFSET + i]);
+        title += String.fromCharCode(this.rom[GBA_TITLE_OFFSET + i]);
       }
-      return titleStr.includes("CASTLEVANIA2");
+      return title.includes("CASTLEVANIA2");
     }
 
     seededRandom(seed) {
@@ -342,76 +300,56 @@
       return array;
     }
 
-    // Direct Assembly Branch Overwrite to bypass cutscenes
-    patchSkipIntro() {
-      // Replaces intro state machine pointer with immediate game loop entry
-      this.rom[0x0002A2] = 0x00;
-      this.rom[0x0002A3] = 0x20; // NOP ARM Instruction
-      this.rom[0x03B938] = 0x00;
-      this.rom[0x03B939] = 0x20;
-      this.spoilerLog.push("=== INTRO PATCHES ===");
-      this.spoilerLog.push("  - Intro cutscenes skipped. Game launches directly to Castle Entrance.");
-      this.spoilerLog.push("");
-    }
-
-    // Direct initial save template bitfield modification
-    patchBackdash() {
-      // Initial Ability Bitmask offset in New Game RAM Initialization Routine
-      const newGameInitOffset = 0x012428;
-      this.rom[newGameInitOffset] |= 0x01; // Enable Grave Keeper (Backdash)
-      this.spoilerLog.push("=== QUALITY OF LIFE PATCHES ===");
-      this.spoilerLog.push("  - Backdash (Grave Keeper) enabled on New Game.");
-      this.spoilerLog.push("");
-    }
-
-    patchBlackPanther(rng, pantherOpt) {
-      this.spoilerLog.push("=== BLACK PANTHER CONFIGURATION ===");
-      if (pantherOpt === "FirstAlways") {
-        // Pedestal item entity table offset for Castle Entrance
-        const entrancePedestalOffset = 0x04C120;
-        this.rom[entrancePedestalOffset + 0x04] = 0x02; // Ability Soul Type
-        this.rom[entrancePedestalOffset + 0x06] = 0x0B; // Black Panther ID
-        this.spoilerLog.push("  - Placed Black Panther Soul on Castle Entrance Pedestal.");
-      }
-      this.spoilerLog.push("");
-    }
-
-    patchSurgeShop(rng, startShopOpt, priceOpt) {
-      this.spoilerLog.push("=== HAMMER'S SHOP CONFIGURATION ===");
-      if (startShopOpt === "Unlocked" || startShopOpt === "Unlocked30k") {
-        // Overwrite Hammer event condition check (Branch Always)
-        this.rom[0x02D214] = 0x00;
-        this.rom[0x02D215] = 0xE0;
-        this.spoilerLog.push("  - Hammer's Shop permanently unlocked.");
-
-        if (startShopOpt === "Unlocked30k") {
-          // Set starting gold bytes in SRAM template
-          this.view.setUint32(0x012430, 30000, true);
-          this.spoilerLog.push("  - Granted 30,000 Starting Gold.");
-        }
-      }
-
-      if (priceOpt === "RandHV") {
-        const priceTableOffset = 0x09B800;
-        for (let i = 0; i < 40; i++) {
-          const randPrice = Math.floor(rng() * 9500) + 100;
-          this.view.setUint16(priceTableOffset + (i * 2), randPrice, true);
-        }
-        this.spoilerLog.push("  - Shop item prices randomized.");
-      }
+    patchLuckFix() {
+      // Corrects the Luck (LCK) stat calculation loop in GBA RAM
+      this.rom[0x01FC20] = 0x01;
+      this.rom[0x01FC21] = 0x20;
+      this.spoilerLog.push("=== STAT FIXES ===");
+      this.spoilerLog.push("  - LCK stat calculation fix applied (Luck now correctly increases drop rates).");
       this.spoilerLog.push("");
     }
 
     patchSouls(rng) {
-      this.spoilerLog.push("=== SOUL DROP SHUFFLE ===");
-      const enemyStatTableOffset = 0x0CC124;
-      const souls = this.shuffle(Array.from({ length: 112 }, (_, i) => i + 1), rng);
-      
-      for (let i = 0; i < 112; i++) {
-        const currentEnemyOffset = enemyStatTableOffset + (i * 36);
-        this.rom[currentEnemyOffset + 0x10] = souls[i]; // Soul ID byte
+      this.spoilerLog.push("=== ENEMY SOUL DROPS (FLAG: d) ===");
+      const soulPool = Array.from({ length: NUM_ENEMIES }, (_, i) => i + 1);
+      const shuffledSouls = this.shuffle([...soulPool], rng);
+
+      for (let i = 0; i < NUM_ENEMIES; i++) {
+        const offset = ENEMY_STAT_TABLE + (i * 36) + 16; // Byte 16 of stat block
+        this.rom[offset] = shuffledSouls[i];
       }
-      this.spoilerLog.push("  - All 112 enemy soul drops randomized.");
+      this.spoilerLog.push(`  - Randomized soul drops across all ${NUM_ENEMIES} enemies.`);
+      this.spoilerLog.push("");
+    }
+
+    patchItems(rng) {
+      this.spoilerLog.push("=== WORLD PICKUPS & ABILITIES (FLAG: i) ===");
+      const shuffledAbilities = this.shuffle([...ABILITY_SOULS], rng);
+
+      GROUND_ITEM_OFFSETS.forEach((offset, idx) => {
+        if (idx < shuffledAbilities.length) {
+          // Set Entity Type to Soul Pickup (0x02) and ID to Ability ID
+          this.rom[offset + 4] = 0x02; 
+          this.rom[offset + 6] = shuffledAbilities[idx];
+          this.spoilerLog.push(`  - Location 0x${offset.toString(16).toUpperCase()} ---> Ability Soul ID 0x${shuffledAbilities[idx].toString(16)}`);
+        } else {
+          // Randomize general item pickup IDs (weapons/armor/consumables: 0x01 to 0x40)
+          const randItemId = Math.floor(rng() * 0x40) + 1;
+          this.rom[offset + 6] = randItemId;
+        }
+      });
+      this.spoilerLog.push("");
+    }
+
+    patchShop(rng) {
+      this.spoilerLog.push("=== HAMMER SHOP INVENTORY (FLAG: h) ===");
+      for (let i = 0; i < 20; i++) {
+        const itemOffset = SHOP_ITEM_TABLE + (i * 4);
+        const randItem = Math.floor(rng() * 0x50) + 1;
+        this.rom[itemOffset] = 0x01; // Item category
+        this.rom[itemOffset + 1] = randItem; // Item ID
+      }
+      this.spoilerLog.push("  - Randomized Hammer Shop inventory items.");
       this.spoilerLog.push("");
     }
 
@@ -419,14 +357,13 @@
       const rng = this.seededRandom(options.seed);
       this.spoilerLog = [];
       this.spoilerLog.push(`=======================================================`);
-      this.spoilerLog.push(`ARIA OF SORROW RANDOMIZER SPOILER LOG - SEED #${options.seed}`);
+      this.spoilerLog.push(`CASTLEVANIA: AOS RANDOMIZER (2018 ENGINE) - SEED #${options.seed}`);
       this.spoilerLog.push(`=======================================================\n`);
 
-      if (options.skipIntro) this.patchSkipIntro();
-      if (options.backdash) this.patchBackdash();
-      this.patchBlackPanther(rng, options.pantherOpt);
-      this.patchSurgeShop(rng, options.startShopOpt, options.priceOpt);
+      if (options.statFix) this.patchLuckFix();
+      if (options.items) this.patchItems(rng);
       if (options.souls) this.patchSouls(rng);
+      if (options.shop) this.patchShop(rng);
 
       return {
         patchedRom: this.rom,
@@ -435,7 +372,7 @@
     }
   }
 
-  // App Controller
+  // UI Controller
   let rawRomBuffer = null;
 
   const consoleEl = document.getElementById('console');
@@ -443,8 +380,6 @@
   const btnDownloadLog = document.getElementById('btnDownloadLog');
   const spoilerDrawer = document.getElementById('spoilerDrawer');
   const spoilerContent = document.getElementById('spoilerContent');
-  const btnToggleSpoiler = document.getElementById('btnToggleSpoiler');
-  const drawerArrow = document.getElementById('drawerArrow');
 
   function log(msg, isError = false) {
     const entry = document.createElement('div');
@@ -463,9 +398,9 @@
     document.body.removeChild(link);
   }
 
-  btnToggleSpoiler.addEventListener('click', () => {
+  document.getElementById('btnToggleSpoiler').addEventListener('click', () => {
     spoilerDrawer.classList.toggle('open');
-    drawerArrow.textContent = spoilerDrawer.classList.contains('open') ? '▲' : '▼';
+    document.getElementById('drawerArrow').textContent = spoilerDrawer.classList.contains('open') ? '▲' : '▼';
   });
 
   document.getElementById('romFile').addEventListener('change', (e) => {
@@ -474,13 +409,12 @@
     const reader = new FileReader();
     reader.onload = (evt) => {
       rawRomBuffer = evt.target.result;
-      const testView = new Uint8Array(rawRomBuffer.slice(0));
-      const checker = new AoSRandomizer(testView);
+      const checker = new AoS2018Randomizer(rawRomBuffer.slice(0));
       
       if (!checker.verifyHeader()) {
-        log("Warning: Header mismatch! Ensure you loaded a clean USA GBA ROM.", true);
+        log("Warning: Header mismatch! Ensure you selected a clean NA GBA ROM.", true);
       } else {
-        log(`Loaded Valid USA ROM: ${file.name} (${rawRomBuffer.byteLength} bytes)`);
+        log(`Loaded Valid GBA ROM: ${file.name} (${rawRomBuffer.byteLength} bytes)`);
       }
       btnDownloadRom.disabled = false;
       btnDownloadLog.disabled = false;
@@ -496,18 +430,14 @@
     const seed = parseInt(document.getElementById('seedInput').value, 10) || 1337;
     const options = {
       seed: seed,
-      skipIntro: document.getElementById('chkSkipIntro').checked,
-      backdash: document.getElementById('chkBackdash').checked,
-      pantherOpt: document.getElementById('selPanther').value,
-      startShopOpt: document.getElementById('selStartShop').value,
-      priceOpt: document.getElementById('selShopPrice').value,
+      items: document.getElementById('chkItems').checked,
       souls: document.getElementById('chkSouls').checked,
-      bosses: document.getElementById('chkBosses').checked
+      shop: document.getElementById('chkShop').checked,
+      statFix: document.getElementById('chkStatFix').checked
     };
 
-    // Deep clone underlying ArrayBuffer bytes
     const workingBytes = new Uint8Array(rawRomBuffer.slice(0));
-    const engine = new AoSRandomizer(workingBytes);
+    const engine = new AoS2018Randomizer(workingBytes);
     return { seed, result: engine.randomize(options) };
   }
 
@@ -516,13 +446,10 @@
     try {
       const { seed, result } = generateSeedData();
       spoilerContent.textContent = result.spoilerText;
-      
-      // Pass typed ArrayBuffer slice directly for binary output
-      const romBlob = new Blob([result.patchedRom], { type: "application/octet-stream" });
-      triggerDownload(romBlob, `AoS_Rando_Seed_${seed}.gba`);
-      log(`Downloaded Patched ROM: 'AoS_Rando_Seed_${seed}.gba'!`);
+      triggerDownload(new Blob([result.patchedRom], { type: "application/octet-stream" }), `AoS_2018Rando_Seed_${seed}.gba`);
+      log(`Exported Patched ROM: 'AoS_2018Rando_Seed_${seed}.gba'!`);
     } catch (err) {
-      log(`Error during patching: ${err.message}`, true);
+      log(`Error patching ROM: ${err.message}`, true);
     }
   });
 
@@ -531,11 +458,10 @@
     try {
       const { seed, result } = generateSeedData();
       spoilerContent.textContent = result.spoilerText;
-      const logBlob = new Blob([result.spoilerText], { type: "text/plain;charset=utf-8" });
-      triggerDownload(logBlob, `AoS_Spoiler_Log_Seed_${seed}.txt`);
-      log(`Downloaded Spoiler Log: 'AoS_Spoiler_Log_Seed_${seed}.txt'!`);
+      triggerDownload(new Blob([result.spoilerText], { type: "text/plain;charset=utf-8" }), `AoS_Spoiler_Log_Seed_${seed}.txt`);
+      log(`Exported Spoiler Log: 'AoS_Spoiler_Log_Seed_${seed}.txt'!`);
     } catch (err) {
-      log(`Error generating log: ${err.message}`, true);
+      log(`Error exporting log: ${err.message}`, true);
     }
   });
 </script>
